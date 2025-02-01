@@ -1039,9 +1039,9 @@ end
 -- setExceptionBreakpoints (https://microsoft.github.io/debug-adapter-protocol/specification#Requests_SetExceptionBreakpoints)
 --- filters: string[]
 --- exceptionOptions: exceptionOptions?: ExceptionOptions[] (https://microsoft.github.io/debug-adapter-protocol/specification#Types_ExceptionOptions)
-function M.set_exception_breakpoints(filters, exceptionOptions)
+function M.set_exception_breakpoints(filters, filterOptions, exceptionOptions)
   if session then
-    session:set_exception_breakpoints(filters, exceptionOptions)
+    session:set_exception_breakpoints(filters, filterOptions, exceptionOptions)
   else
     notify('Cannot set exception breakpoints: No active session!', vim.log.levels.INFO)
   end
