@@ -85,14 +85,14 @@ function M.get_processes(opts)
   opts = opts or {}
   local is_windows = vim.fn.has('win32') == 1
   local separator = is_windows and ',' or ' \\+'
-  local command = is_windows and {'tasklist', '/nh', '/fo', 'csv'} or {'ps', 'ah', '-U', os.getenv("USER")}
-  -- output format for `tasklist /nh /fo` csv
-  --    '"smss.exe","600","Services","0","1,036 K"'
+  local command = is_windows and {'wmic', 'process', 'get', 'CommandLine,Name,ProcessId', '/format:csv'} or {'ps', 'ah', '-U', os.getenv("USER")}
+  -- output format for `wmic process get CommandLine,Name,ProcessId /format:csv`
+  --    'Node,CommandLine (could contain commas),Name,ProcessId'
   -- output format for `ps ah`
   --    " 107021 pts/4    Ss     0:00 /bin/zsh <args>"
   local get_pid = function (parts)
     if is_windows then
-      return vim.fn.trim(parts[2], '"')
+      return parts[#parts]
     else
       return parts[1]
     end
@@ -100,7 +100,14 @@ function M.get_processes(opts)
 
   local get_process_name = function (parts)
     if is_windows then
-      return vim.fn.trim(parts[1], '"')
+      if string.lower(parts[3]) == "wmic.exe" then
+        return nil
+      end
+      if parts[2] == '' then
+        return parts[3]
+      else
+        return table.concat(parts, ',', 2, #parts-2)
+      end
     else
       return table.concat({unpack(parts, 5)}, ' ')
     end
@@ -112,12 +119,13 @@ function M.get_processes(opts)
 
   local nvim_pid = vim.fn.getpid()
   for _, line in pairs(lines) do
-    if line ~= "" then -- tasklist command outputs additional empty line in the end
+    line = vim.fn.trim(line)
+    if line ~= "" then
       local parts = vim.fn.split(vim.fn.trim(line), separator)
       local pid, name = get_pid(parts), get_process_name(parts)
       pid = tonumber(pid)
-      if pid and pid ~= nvim_pid then
-        table.insert(procs, { pid = pid, name = name })
+      if pid and pid ~= nvim_pid and name then
+        table.insert(procs, { pid = pid, name = name})
       end
     end
   end
